@@ -1,2 +1,3 @@
 # ssh_crack
-detecting the Brute-force attack based on ssh traffic
+## ssh_bruteforce.rule
+detecting the Brute-force attack based on ssh traffic.

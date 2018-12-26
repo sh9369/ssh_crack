@@ -1,0 +1,117 @@
+# =============================================================================
+# This file defines the rule to detect the Brute-force Attack based on ssh traffic.
+#
+# ZHANG Li Dan <lidan.zhang@clearclouds-global.com>
+# Nanjing Yunlilai (C) 2018-2019
+# =============================================================================
+import "security/ssh_crack/cfg/%(__sys_lang__)/ssh_bruteforce.rule";
+
+
+# -----------------------------------------------------------------------------
+# Setup the timestamp so that query() function could use the save timestamp.
+# -----------------------------------------------------------------------------
+__now__ = now();
+
+
+# -----------------------------------------------------------------------------
+# __alert() - Output the alarm result.
+# list:[{},{},...]
+# This function returns the list itself for chain operation.
+# -----------------------------------------------------------------------------
+def __alert(list, args) {
+	__subtype__      = args["subtype"];
+	__level__        = args["level"];
+
+	__desc_type__    = args["desc_type"];
+	__desc_subtype__ = args["desc_subtype"];
+	#__desc_action__  = args["desc_action"];
+	#__desc_title__   = args["desc_title"];
+
+	return alert(list);
+}
+
+# -----------------------------------------------------------------------------
+# query_ssh_info() - 找出ssh流量中存在暴力破解的行为.
+#
+# @args: Configuration of per sip.
+# -----------------------------------------------------------------------------
+def query_ssh_info(res,args){
+	tcp_indx= __TCP_index__;
+	threshold_flow=args["flows"];
+	sql = "
+		SELECT   SUM(flow) AS flow
+		FROM     $(tcp_indx)
+		WHERE        last(%(__info_range__))
+				 AND dport=22
+				 AND timeout_state IN $(__timeout_crack__)
+				 AND (inpacket-retransmit_in)/flow<28
+				 AND (outpacket-retransmit_out)/flow<28
+				 AND (inpacket-retransmit_in)/flow>13
+				 AND (outpacket-retransmit_out)/flow>13
+		GROUP BY 
+				date_histogram(%(__info_range__)) AS @timestamp,
+				sip, 
+				dip
+		LIMIT    10, 10
+	";
+	listRes = query(sql,"flow>=threshold_flow");
+	#pprint(listRes);
+	return listRes;
+}
+
+# -----------------------------------------------------------------------------
+# query_alert_info() - 流量对比，发出info告警.
+#
+# @args: Configuration of per sip.
+# -----------------------------------------------------------------------------
+def query_alert_info(listRes, args) {
+	tcp_indx= __TCP_index__;
+	threshold = args["threshold"];
+	alert_list=[];
+	# 循环判断
+	for item in listRes{
+		sip_info=item["sip"];
+		dip_info=item["dip"];
+		flow_info=item["flow"];
+		sql = "
+			SELECT	 SUM(flow) AS flow
+			FROM     $(tcp_indx)
+			WHERE        last(%(__info_range__))
+					 AND sip = $(sip_info)
+					 AND dip = $(dip_info)
+		";
+		listRes = query(sql);
+		
+		for ii in listRes{
+			threshold_now=(1.0*flow_info)/int(ii["flow"]);
+			#pprint(threshold_now);
+			if(threshold_now>=threshold){
+				#pprint(item);
+				alert_list=append(alert_list,item);
+			}
+		}
+		
+	}
+	__alert(alert_list,args);
+	return alert_list;
+}
+
+
+
+# -----------------------------------------------------------------------------
+# main() - Main entry of the rule.
+# -----------------------------------------------------------------------------
+def main() {
+	func_list = [
+		{ "name": "query_ssh_info",            "args": __cfg_info__ },
+		{ "name": "query_alert_info",   "args": __cfg_info__ }
+	];
+
+	call_list(func_list);
+}
+
+
+# -----------------------------------------------------------------------------
+# Run the rule.
+# -----------------------------------------------------------------------------
+main();

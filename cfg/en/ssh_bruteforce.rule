@@ -1,0 +1,62 @@
+# =============================================================================
+# 本文件定义规则的配置信息.
+#
+# ZHANG Li Dan <lidan.zhang@clearclouds-global.com>
+# 南京云利来 (C) 2018-2019
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# 基本配置.
+#
+# __type__:  报警类型;
+# __info_range__: info告警中检测数据时间窗口 (从当前到过去一段时间);
+# __timeout_crack__：ssh协议暴力破解过程tcp结束状态;
+# __TCP_index__：tcp索引;
+# -----------------------------------------------------------------------------
+__type__  = "threat";
+__info_range__ = "30m";
+__warn_range__ = "24h";
+__timeout_crack__=[8,13,14,15];
+__TCP_index__= "tcp-agg-*";
+
+
+# -----------------------------------------------------------------------------
+# info 告警 配置信息
+# __threshold_flow__ 表示range_info时间内出现次数
+# -----------------------------------------------------------------------------
+threshold     = 0.8;
+threshold_flow = 6;
+desc_type     = "[threat] Suspected to be attacked against the SSH protocol";
+desc_subtype  = "Suspected of violent attacks against the SSH protocol";
+__cfg_info__ = {
+	"subtype":   "brute_force",
+	"level":     "info",
+	"threshold": threshold,
+	"flows":threshold_flow,
+
+	"desc_type":    desc_type,
+	"desc_subtype": desc_subtype
+};
+
+
+
+# -----------------------------------------------------------------------------
+# 字段描述信息(邮件)
+#
+# <key>:        字段名;
+# <value>.desc: 字段描述;
+# <value>.fmt:  数据类型.
+# -----------------------------------------------------------------------------
+__fields_all__ = {
+	"@timestamp":   { "desc": "时间戳"   },
+	"sip":          { "desc": "源 IP"    },
+	"dip":          { "desc": "目的 IP"  },
+	"dport":        { "desc": "目的端口" },
+	"owner":        { "desc": "责任人"   },
+
+	"flows":        { "desc": "连接数",       "fmt": "int" },
+	"count_dip":    { "desc": "目的 IP 个数", "fmt": "int" },
+	"count_dport":  { "desc": "目的端口个数", "fmt": "int" }
+};
+
