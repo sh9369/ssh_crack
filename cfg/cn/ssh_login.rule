@@ -12,7 +12,6 @@
 # __type__:  报警类型;
 # __info_range__: info告警中检测数据时间窗口 (从当前到过去一段时间);
 # __warn_range__ : warn 告警中检测数据时间窗口;
-# __timeout_crack__：ssh协议暴力破解过程tcp结束状态;
 # __TCP_index__：tcp索引;
 # __whitelist__: 可以远程ssh登陆的白名单信息。all表示全局；具体IP作为key；
 # 				ip_list是具体ip的集合；ip_range为IP范围，CIDR或“A TO B"的形式。
@@ -21,7 +20,6 @@
 __type__  = "threat";
 __info_range__ = "30m";
 __warn_range__ = "48h";
-__timeout_crack__=[8,13,14,15];
 __TCP_index__= "tcp-agg-*";
 __alert_index__="alert-*";
 __whitelist__={
