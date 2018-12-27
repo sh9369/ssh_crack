@@ -1,10 +1,10 @@
 # =============================================================================
-# This file defines the rule to detect the Brute-force Attack based on ssh traffic.
+# This file defines the rule to detect the login behaviour based on ssh traffic.
 #
 # ZHANG Li Dan <lidan.zhang@clearclouds-global.com>
 # Nanjing Yunlilai (C) 2018-2019
 # =============================================================================
-import "security/ssh_crack/cfg/%(__sys_lang__)/ssh_bruteforce.rule";
+import "security/ssh_crack/cfg/%(__sys_lang__)/ssh_login.rule";
 
 
 # -----------------------------------------------------------------------------
@@ -31,71 +31,98 @@ def __alert(list, args) {
 }
 
 # -----------------------------------------------------------------------------
-# query_ssh_info() - 找出ssh流量中存在暴力破解的行为.
+# query_ssh_login() - 找出ssh流量中存在登陆的行为.
 #
 # @args: Configuration of per sip.
 # -----------------------------------------------------------------------------
 def query_ssh_info(res,args){
 	tcp_indx= __TCP_index__;
-	threshold_flow=args["flows"];
+	in_ip=__inner_IP__;
 	sql = "
 		SELECT   SUM(flow) AS flow
 		FROM     $(tcp_indx)
 		WHERE        last(%(__info_range__))
 				 AND dport=22
-				 AND timeout_state IN $(__timeout_crack__)
-				 AND (inpacket-retransmit_in)/flow<28
-				 AND (outpacket-retransmit_out)/flow<28
-				 AND (inpacket-retransmit_in)/flow>13
-				 AND (outpacket-retransmit_out)/flow>13
+				 AND ip_ranges(dip,$(in_ip))
+				 AND (inpacket-retransmit_in)/flow>30.0
+				 AND (outpacket-retransmit_out)/flow>30.0
 		GROUP BY 
 				date_histogram(%(__info_range__)) AS @timestamp,
 				sip, 
 				dip
 		LIMIT    10, 10
 	";
-	listRes = query(sql,"flow>=threshold_flow");
+	listRes = query(sql);
 	#pprint(listRes);
 	return listRes;
 }
 
 # -----------------------------------------------------------------------------
-# query_alert_info() - 通过同时间段内的流量对比，发出info告警.
+# query_alert_info() - 白名单清洗过滤后 info 告警.
 #
 # @args: Configuration of per sip.
 # -----------------------------------------------------------------------------
 def query_alert_info(listRes, args) {
-	tcp_indx= __TCP_index__;
-	threshold = args["threshold"];
 	alert_list=[];
-	# 循环判断
-	for item in listRes{
-		sip_info=item["sip"];
-		dip_info=item["dip"];
-		flow_info=item["flow"];
-		sql = "
-			SELECT	 SUM(flow) AS flow
-			FROM     $(tcp_indx)
-			WHERE        last(%(__info_range__))
-					 AND sip = $(sip_info)
-					 AND dip = $(dip_info)
-		";
-		listRes = query(sql);
-		
-		for ii in listRes{
-			threshold_now=(1.0*flow_info)/int(ii["flow"]);
-			#pprint(threshold_now);
-			if(threshold_now>=threshold){
-				#pprint(item);
-				alert_list=append(alert_list,item);
+	tcp_indx= __TCP_index__;
+
+	# white list filter
+	whitelist=__whitelist__;
+	all_iplist=whitelist["all"];
+	# filter
+	res_tmp=agg_items(listRes,"dip");
+	for key,value in res_tmp{
+		for itm in value{
+			#pprint(itm);
+			ip_tmp=itm["sip"];
+			#pprint(key IN keys(whitelist));
+			#pprint(ip_in(ip_tmp,whitelist[key]));
+			#pprint(ip_tmp);
+			if(ip_in(ip_tmp,all_iplist)){
+				continue;
+			}else if(key IN keys(whitelist) && ip_in(ip_tmp,whitelist[key])){
+				continue;
+			}else {
+				alert_list=append(alert_list,itm);
 			}
 		}
-		
 	}
+
 	__alert(alert_list,args);
 	return alert_list;
 }
 
+
+
+# -----------------------------------------------------------------------------
+# query_ssh_warn() - 根据info告警找出sip曾在48小时内被标记为scan or bruteforce.
+#
+# @args: Configuration of per sip.
+# -----------------------------------------------------------------------------
+def query_ssh_warn(listRes,args){
+	alert_indx= __alert_index__;
+	in_ip=__inner_IP__;
+	sip_tmp=agg_items(listRes,"sip");
+	siplis=keys(sip_tmp);
+	sql = "
+		SELECT   SUM(flow) AS flow
+		FROM     $(alert_indx)
+		WHERE        last(%(__warn_range__))
+				 AND (type='scan' OR subtype='brute_force')
+				 AND sip IN $(siplis)
+		GROUP BY sip
+		LIMIT    100
+	";
+	res = query(sql);
+	# get sip list
+	res_tmp=item_values(res,"sip");
+	for itm in res_tmp{
+		values=sip_tmp[itm];
+		__alert(values,args);
+	}
+	#pprint(listRes);
+	return listRes;
+}
 
 
 # -----------------------------------------------------------------------------
@@ -104,7 +131,8 @@ def query_alert_info(listRes, args) {
 def main() {
 	func_list = [
 		{ "name": "query_ssh_info",            "args": __cfg_info__ },
-		{ "name": "query_alert_info",   "args": __cfg_info__ }
+		{ "name": "query_alert_info",   "args": __cfg_info__ },
+		{ "name": "query_ssh_warn",   "args": __cfg_warn__ }
 	];
 
 	call_list(func_list);
