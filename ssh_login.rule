@@ -78,11 +78,23 @@ def query_alert_info(listRes, args) {
 			#pprint(key IN keys(whitelist));
 			#pprint(ip_in(ip_tmp,whitelist[key]));
 			#pprint(ip_tmp);
+			# sip in all
 			if(ip_in(ip_tmp,all_iplist)){
 				continue;
-			}else if(key IN keys(whitelist) && ip_in(ip_tmp,whitelist[key])){
-				continue;
-			}else {
+			}
+			# in other 
+			flg=0;
+			for ky in keys(whitelist){
+				if(ip_in(key,ky)){
+					if(ip_in(ip_tmp,whitelist[ky])){
+						flg=1;
+						continue;
+					}
+				}
+			}
+			# not in whitelist
+			if(flg==0){
+				pprint(itm);
 				alert_list=append(alert_list,itm);
 			}
 		}
