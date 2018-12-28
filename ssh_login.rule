@@ -94,7 +94,7 @@ def query_alert_info(listRes, args) {
 			}
 			# not in whitelist
 			if(flg==0){
-				pprint(itm);
+				#pprint(itm);
 				alert_list=append(alert_list,itm);
 			}
 		}
