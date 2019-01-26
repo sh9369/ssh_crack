@@ -35,7 +35,7 @@ def __alert(list, args) {
 #
 # @args: Configuration of per sip.
 # -----------------------------------------------------------------------------
-def query_ssh_info(res,args){
+def query_ssh_login(res,args){
 	tcp_indx= __TCP_index__;
 	in_ip=__inner_IP__;
 	sql = "
@@ -44,13 +44,13 @@ def query_ssh_info(res,args){
 		WHERE        last(%(__info_range__))
 				 AND dport=22
 				 AND ip_ranges(dip,$(in_ip))
-				 AND (inpacket-retransmit_in)/flow>30.0
-				 AND (outpacket-retransmit_out)/flow>30.0
+				 AND (inpacket-retransmit_in)>flow*$(__pkg_threshold__)
+				 AND (outpacket-retransmit_out)>flow*$(__pkg_threshold__)
 		GROUP BY 
 				date_histogram(%(__info_range__)) AS @timestamp,
 				sip, 
 				dip
-		LIMIT    10, 10
+		LIMIT    100, 100
 	";
 	listRes = query(sql);
 	#pprint(listRes);
@@ -142,7 +142,7 @@ def query_ssh_warn(listRes,args){
 # -----------------------------------------------------------------------------
 def main() {
 	func_list = [
-		{ "name": "query_ssh_info",            "args": __cfg_info__ },
+		{ "name": "query_ssh_login",            "args": __cfg_info__ },
 		{ "name": "query_alert_info",   "args": __cfg_info__ },
 		{ "name": "query_ssh_warn",   "args": __cfg_warn__ }
 	];

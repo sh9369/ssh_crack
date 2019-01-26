@@ -19,26 +19,34 @@ __info_range__ = "30m";
 __warn_range__ = "24h";
 __timeout_crack__=[8,13,14,15];
 __TCP_index__= "tcp-agg-*";
+__pkg_high__=28;
+__pkg_low__=13;
 
 
 # -----------------------------------------------------------------------------
 # info 告警 配置信息
 # __threshold_flow__ 表示range_info时间内出现次数
 # -----------------------------------------------------------------------------
-threshold     = 0.8;
-threshold_flow = 6;
-desc_type     = "[threat] 疑似遭受针对SSH协议的远程攻击";
-desc_subtype  = "疑似遭受针对SSH协议的暴力破解攻击";
 __cfg_info__ = {
 	"subtype":   "brute_force",
 	"level":     "info",
-	"threshold": threshold,
-	"flows":threshold_flow,
-
-	"desc_type":    desc_type,
-	"desc_subtype": desc_subtype
+	"flows": 6,
+	"desc_type":    "[threat] 疑似遭受针对SSH协议的远程攻击",
+	"desc_subtype": "疑似遭受针对SSH协议的暴力破解攻击"
 };
 
+
+# -----------------------------------------------------------------------------
+# warn 告警 配置信息
+# __threshold_flow__ 表示range_info时间内出现次数
+# -----------------------------------------------------------------------------
+__cfg_warn__ = {
+	"threshold" : 0.6,
+	"subtype":   "brute_force",
+	"level":     "warn",
+	"desc_type":    "[threat] 疑似遭受针对SSH协议的远程攻击",
+	"desc_subtype": "疑似遭受针对SSH协议的暴力破解攻击"
+};
 
 
 # -----------------------------------------------------------------------------

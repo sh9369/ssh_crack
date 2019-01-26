@@ -23,6 +23,7 @@ __info_range__ = "30m";
 __warn_range__ = "48h";
 __TCP_index__= "tcp-agg-*";
 __alert_index__="alert-*";
+__pkg_threshold__=30.0;
 __whitelist__={
 	"all":["#"],
 	"172.17.23.69":["#"],
@@ -35,14 +36,11 @@ __inner_IP__=["172.16.0.0 TO 172.31.255.255","192.168.0.0 TO 192.168.255.255"];
 # -----------------------------------------------------------------------------
 # info 告警 配置信息
 # -----------------------------------------------------------------------------
-desc_type     = "[threat] login doubtfully";
-desc_subtype  = "unknown sip login by SSH protocol.";
 __cfg_info__ = {
 	"subtype":   "login_doubtfully",
 	"level":     "info",
-
-	"desc_type":    desc_type,
-	"desc_subtype": desc_subtype
+	"desc_type":    "[threat] login doubtfully",
+	"desc_subtype": "unknown sip login by SSH protocol"
 };
 
 
@@ -50,16 +48,13 @@ __cfg_info__ = {
 # -----------------------------------------------------------------------------
 # warn 告警 配置信息
 # -----------------------------------------------------------------------------
-desc_type     = "[threat] login doubtfully";
-desc_subtype  = "malicious sip login by SSH protocol.";
 __cfg_warn__ = {
 	"subtype":   "login_doubtfully",
 	"level":     "warn",
 
-	"desc_type":    desc_type,
-	"desc_subtype": desc_subtype
+	"desc_type":    "[threat] login doubtfully",
+	"desc_subtype": "malicious sip login by SSH protocol"
 };
-
 
 
 # -----------------------------------------------------------------------------

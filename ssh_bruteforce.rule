@@ -31,67 +31,73 @@ def __alert(list, args) {
 }
 
 # -----------------------------------------------------------------------------
-# query_ssh_info() - 找出ssh流量中存在暴力破解的行为.
+# query_ssh_info() - 找出ssh流量中存在暴力破解的行为,发出info告警.
 #
 # @args: Configuration of per sip.
 # -----------------------------------------------------------------------------
 def query_ssh_info(res,args){
 	tcp_indx= __TCP_index__;
 	threshold_flow=args["flows"];
+
 	sql = "
 		SELECT   SUM(flow) AS flow
 		FROM     $(tcp_indx)
 		WHERE        last(%(__info_range__))
 				 AND dport=22
 				 AND timeout_state IN $(__timeout_crack__)
-				 AND (inpacket-retransmit_in)/flow<28
-				 AND (outpacket-retransmit_out)/flow<28
-				 AND (inpacket-retransmit_in)/flow>13
-				 AND (outpacket-retransmit_out)/flow>13
+				 AND (inpacket-retransmit_in)<flow*$(__pkg_high__)
+				 AND (inpacket-retransmit_in)>flow*$(__pkg_low__)
 		GROUP BY 
 				date_histogram(%(__info_range__)) AS @timestamp,
 				sip, 
 				dip
-		LIMIT    10, 10
+		LIMIT    100, 100
 	";
 	listRes = query(sql,"flow>=threshold_flow");
+	__alert(listRes,args);
 	#pprint(listRes);
 	return listRes;
 }
 
 # -----------------------------------------------------------------------------
-# query_alert_info() - 通过同时间段内的流量对比，发出info告警.
+# query_ssh_warn() - 通过同时间段内的流量对比，发出warn告警.
 #
 # @args: Configuration of per sip.
 # -----------------------------------------------------------------------------
-def query_alert_info(listRes, args) {
+def query_ssh_warn(listRes, args) {
 	tcp_indx= __TCP_index__;
 	threshold = args["threshold"];
 	alert_list=[];
-	# 循环判断
-	for item in listRes{
-		sip_info=item["sip"];
-		dip_info=item["dip"];
-		flow_info=item["flow"];
-		sql = "
-			SELECT	 SUM(flow) AS flow
-			FROM     $(tcp_indx)
-			WHERE        last(%(__info_range__))
-					 AND sip = $(sip_info)
-					 AND dip = $(dip_info)
+	sip_list=item_values(listRes,"sip");
+	dip_list=item_values(listRes,"dip");
+	# get es data
+	sql = "
+		SELECT	 SUM(flow) AS flow
+		FROM     $(tcp_indx)
+		WHERE    last(%(__info_range__))
+				 AND (sip IN $(sip_list)) 
+				 AND (dip IN $(dip_list))
+		GROUP BY sip,dip
+		LIMIT 100,100
 		";
-		listRes = query(sql);
-		
-		for ii in listRes{
-			threshold_now=(1.0*flow_info)/int(ii["flow"]);
-			#pprint(threshold_now);
-			if(threshold_now>=threshold){
+	res_ip = query(sql);
+	# compare flow 
+	applist=append_list(listRes,res_ip);
+	newdict=list_to_dict(applist,["sip","dip"],"_");
+	for key,value in newdict{
+		if(len(value)==2){
+			if(int(value[0]["flow"])>int(value[1]["flow"])){
+				tmp=value[0]["flow"];
+				value[0]["flow"]=value[1]["flow"];
+				value[1]["flow"]=tmp;
+			}
+			if(fmt_float(value[0]["flow"])>=int(value[1]["flow"])*threshold){
 				#pprint(item);
-				alert_list=append(alert_list,item);
+				alert_list=append(alert_list,value[0]);
 			}
 		}
-		
 	}
+
 	__alert(alert_list,args);
 	return alert_list;
 }
@@ -103,8 +109,8 @@ def query_alert_info(listRes, args) {
 # -----------------------------------------------------------------------------
 def main() {
 	func_list = [
-		{ "name": "query_ssh_info",            "args": __cfg_info__ },
-		{ "name": "query_alert_info",   "args": __cfg_info__ }
+		{ "name": "query_ssh_info",   "args": __cfg_info__ },
+		{ "name": "query_ssh_warn",   "args": __cfg_warn__ }
 	];
 
 	call_list(func_list);
