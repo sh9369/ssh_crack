@@ -4,6 +4,7 @@
 # ZHANG Li Dan <lidan.zhang@clearclouds-global.com>
 # Nanjing Yunlilai (C) 2018-2019
 # =============================================================================
+import "security/ssh_crack/cfg/ssh_bruteforce_cfg.rule";
 import "security/ssh_crack/cfg/%(__sys_lang__)/ssh_bruteforce.rule";
 
 
@@ -54,6 +55,22 @@ def query_ssh_info(res,args){
 		LIMIT    100, 100
 	";
 	listRes = query(sql,"flow>=threshold_flow");
+	# add dept info and sites info
+	# sip dept info or site info
+	tmp_siplis=item_values(listRes,"sip");
+	geo_siplis=ipip(tmp_siplis);
+	value_map(listRes,"sip",geo_siplis[0],"src_country");
+	value_map(listRes,"sip",geo_siplis[1],"src_province");
+	value_map(listRes,"sip",geo_siplis[2],"src_city");
+	listRes=ip_map(listRes,"sip",__ip_dept__,"src_dept");
+	# dip dept info or site info
+	tmp_diplis=item_values(listRes,"dip");
+	geo_diplis=ipip(tmp_diplis);
+	value_map(listRes,"dip",geo_diplis[0],"dst_country");
+	value_map(listRes,"dip",geo_diplis[1],"dst_province");
+	value_map(listRes,"dip",geo_diplis[2],"dst_city");
+	listRes=ip_map(listRes,"dip",__ip_dept__,"dst_dept");
+	# alert
 	__alert(listRes,args);
 	#pprint(listRes);
 	return listRes;
