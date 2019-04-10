@@ -38,7 +38,7 @@ def __alert(list, args) {
 # -----------------------------------------------------------------------------
 def query_ssh_login(res,args){
 	tcp_indx= __TCP_index__;
-	in_ip=__inner_IP__;
+	in_ip=__iplist_lan__; # 全局变量 from data.rule
 	sql = "
 		SELECT   SUM(flow) AS flow
 		FROM     $(tcp_indx)
@@ -131,7 +131,7 @@ def query_alert_info(listRes, args) {
 # -----------------------------------------------------------------------------
 def query_ssh_warn(listRes,args){
 	alert_indx= __alert_index__;
-	in_ip=__inner_IP__;
+	in_ip=__iplist_lan__;  # 全局变量 from data.rule
 	sip_tmp=agg_items(listRes,"sip");
 	siplis=keys(sip_tmp);
 	sql = "
