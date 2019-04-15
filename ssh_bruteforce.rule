@@ -4,8 +4,8 @@
 # ZHANG Li Dan <lidan.zhang@clearclouds-global.com>
 # Nanjing Yunlilai (C) 2018-2019
 # =============================================================================
-import "security/ssh_crack/cfg/ssh_bruteforce_cfg.rule";
-import "security/ssh_crack/cfg/%(__sys_lang__)/ssh_bruteforce.rule";
+import "security/scan/ssh_crack/cfg/ssh_bruteforce_cfg.rule";
+import "security/scan/ssh_crack/cfg/%(__sys_lang__)/ssh_bruteforce.rule";
 
 
 # -----------------------------------------------------------------------------
